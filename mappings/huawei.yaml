@@ -17,8 +17,10 @@ counters:
   ERAB.RelActNbr.sum:        {expr: "L.E-RAB.AbnormRel", status: verified_public}
   ERAB.RelAttNbr.sum:        {expr: "L.E-RAB.AbnormRel + L.E-RAB.NormRel", status: verified_public}
   ERAB.SessionTimeUE:        {expr: null, status: unmapped, note: "No public Huawei equivalent identified; R2 retainability is reported as unavailable for Huawei rather than estimated."}
-  HO.ExeAtt:                 {expr: null, status: to_verify, note: "Huawei splits handover executions into L.HHO.* counters per intra/inter-eNB and intra/inter-frequency; confirm the exact names for your release."}
-  HO.ExeSucc:                {expr: null, status: to_verify}
+  HO.ExeAtt:                 {expr: "L.HHO.IntraeNB.IntraFreq.ExecAttOut + L.HHO.IntraeNB.InterFreq.ExecAttOut + L.HHO.IntereNB.IntraFreq.ExecAttOut + L.HHO.IntereNB.InterFreq.ExecAttOut",
+                              status: verified_public, note: "Intra/inter-eNB x intra/inter-frequency executions; inter-RAT handovers are not included."}
+  HO.ExeSucc:                {expr: "L.HHO.IntraeNB.IntraFreq.ExecSuccOut + L.HHO.IntraeNB.InterFreq.ExecSuccOut + L.HHO.IntereNB.IntraFreq.ExecSuccOut + L.HHO.IntereNB.InterFreq.ExecSuccOut",
+                              status: verified_public}
   DRB.IPVolDl.sum:           {expr: "(L.Thrp.bits.DL - L.Thrp.bits.DL.LastTTI) / 1000", unit_in: bit, status: verified_public}
   DRB.IPTimeDl.sum:          {expr: "L.Thrp.Time.DL.RmvLastTTI", unit_in: ms, status: verified_public}
   DRB.IPVolUl.sum:           {expr: "(L.Thrp.bits.UL - L.Thrp.bits.UE.UL.LastTTI) / 1000", unit_in: bit, status: verified_public}

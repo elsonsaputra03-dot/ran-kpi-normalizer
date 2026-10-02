@@ -1,4 +1,6 @@
 # ZTE LTE -> model counter seragam: TEMPLATE, belum diisi.
+# ZTE memakai ID counter numerik (C373xxxxxx) yang berbeda antar-versi software. Pada pencarian publik, ID ini hanya muncul di dokumen
+# berlabel rahasia vendor; tidak ada referensi independen. Karena itu belum diisi: gunakan dokumentasi ZTE resmi untuk versi Anda.
 # Isi expr dengan nama PM counter ZTE dari dokumentasi vendor atau pengetahuan Anda sendiri (bukan dari dokumen/berkas
 # milik operator atau pemberi kerja), lalu ubah status menjadi verified. Pipeline melewati vendor yang counter wajibnya
 # belum terisi dan melaporkannya.

@@ -63,7 +63,7 @@ def expected_hourly(run, vendor: str) -> pd.DataFrame:
     return t
 
 
-CC = ["RRC.ConnEstabAtt.sum", "S1SIG.ConnEstabSucc", "ERAB.EstabInitSuccNbr.sum", "ERAB.RelActNbr.sum", "ERAB.RelAttNbr.sum",
+CC = ["RRC.ConnEstabAtt.sum", "S1SIG.ConnEstabSucc", "HO.ExeAtt", "HO.ExeSucc", "ERAB.EstabInitSuccNbr.sum", "ERAB.RelActNbr.sum", "ERAB.RelAttNbr.sum",
       "DRB.IPVolDl.sum", "DRB.IPTimeDl.sum", "DRB.IPVolUl.sum", "DRB.IPTimeUl.sum", "RRU.CellUnavailableTime.sum"]
 
 
@@ -114,7 +114,7 @@ def test_accessibility_is_product_of_three_ratios(run):
 
 def test_unmapped_counters_give_unavailable_kpis_not_guesses(run):
     cov = run["res"]["kpi_coverage"]
-    assert cov["huawei"]["erab_retainability_r2"].startswith("unavailable") and cov["huawei"]["ho_exec_sr"].startswith("unavailable")
+    assert cov["huawei"]["erab_retainability_r2"].startswith("unavailable") and cov["huawei"]["ho_exec_sr"] == "ok"
     assert all(s == "ok" for s in cov["ericsson"].values())
     v = pd.read_csv(run["out"] / "kpi_vendor_day.csv").set_index("vendor")
     assert pd.isna(v.loc["huawei", "erab_retainability_r2"]) and not pd.isna(v.loc["ericsson", "erab_retainability_r2"])

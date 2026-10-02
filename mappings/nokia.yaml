@@ -1,4 +1,4 @@
-# Nokia LTE -> model counter seragam: TEMPLATE, belum diisi.
+# Nokia LTE -> model counter seragam. Sebagian terisi: hanya counter yang namanya muncul di beberapa referensi publik independen.
 # Isi expr dengan nama PM counter Nokia dari dokumentasi vendor atau pengetahuan Anda sendiri (bukan dari dokumen/berkas
 # milik operator atau pemberi kerja), lalu ubah status menjadi verified. Pipeline melewati vendor yang counter wajibnya
 # belum terisi dan melaporkannya.
@@ -6,12 +6,13 @@ vendor: nokia
 technology: lte
 export: {granularity_minutes: 60, time_column: null, time_format: null, timezone_offset_hours: 0, cell_column: null}
 counters:
-  RRC.ConnEstabAtt.sum: {expr: null, status: to_verify}
-  RRC.ConnEstabSucc.sum: {expr: null, status: to_verify}
+  RRC.ConnEstabAtt.sum: {expr: "M8013C17 + M8013C18 + M8013C19 + M8013C21 + M8013C31 + M8013C34", status: verified_public,
+                        note: "SIGN_CONN_ESTAB_ATT per cause (MO signalling, MT, MO data, emergency, high priority, delay tolerant); the set of causes varies by release."}
+  RRC.ConnEstabSucc.sum: {expr: "M8013C5", status: verified_public, note: "SIGN_CONN_ESTAB_COMP"}
   S1SIG.ConnEstabAtt: {expr: null, status: to_verify}
   S1SIG.ConnEstabSucc: {expr: null, status: to_verify}
-  ERAB.EstabInitAttNbr.sum: {expr: null, status: to_verify}
-  ERAB.EstabInitSuccNbr.sum: {expr: null, status: to_verify}
+  ERAB.EstabInitAttNbr.sum: {expr: "M8006C0", status: verified_public, note: "EPS_BEARER_SETUP_ATTEMPTS: initial and added E-RABs together, like the Huawei mapping."}
+  ERAB.EstabInitSuccNbr.sum: {expr: "M8006C1", status: verified_public, note: "EPS_BEARER_SETUP_COMPLETIONS"}
   ERAB.EstabAddAttNbr.sum: {expr: null, status: to_verify}
   ERAB.EstabAddSuccNbr.sum: {expr: null, status: to_verify}
   ERAB.RelActNbr.sum: {expr: null, status: to_verify}

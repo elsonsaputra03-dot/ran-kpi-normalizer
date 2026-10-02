@@ -117,6 +117,11 @@ def render_huawei(rows: list[dict], names: dict, rnd: random.Random) -> list[dic
     out = []
     for (cell, ts), h in hours.items():
         last_dl, last_ul = rnd.randint(0, 2_000_000), rnd.randint(0, 500_000)
+        ho_att = _split(h["HO.ExeAtt"], rnd, 4)
+        ho_ok, left = [], h["HO.ExeSucc"]
+        for i, a in enumerate(ho_att):                                       # pecah sukses tanpa melebihi attempt per jenis
+            rest = sum(ho_att[i + 1:]); k = a if i == 3 else min(a, max(left - rest, rnd.randint(0, min(a, left))))
+            k = min(k, left); ho_ok.append(k); left -= k
         avail = 100.0; used = round(h["prb_w"] / h["secs"] * avail / 100, 4)
         out.append({"Start Time": (ts + timedelta(hours=7)).strftime("%Y-%m-%d %H:%M:%S"), "eNodeB Name": cell.split("_")[0],
                     "Cell Name": names[cell],
@@ -129,6 +134,10 @@ def render_huawei(rows: list[dict], names: dict, rnd: random.Random) -> list[dic
                     "L.Thrp.bits.UL": h["DRB.IPVolUl.sum"] * 1000 + last_ul, "L.Thrp.bits.UE.UL.LastTTI": last_ul,
                     "L.Thrp.Time.UE.UL.RmvLastTTI": h["DRB.IPTimeUl.sum"],
                     "L.ChMeas.PRB.DL.Used.Avg": used, "L.ChMeas.PRB.DL.Avail": avail,
+                    "L.HHO.IntraeNB.IntraFreq.ExecAttOut": ho_att[0], "L.HHO.IntraeNB.InterFreq.ExecAttOut": ho_att[1],
+                    "L.HHO.IntereNB.IntraFreq.ExecAttOut": ho_att[2], "L.HHO.IntereNB.InterFreq.ExecAttOut": ho_att[3],
+                    "L.HHO.IntraeNB.IntraFreq.ExecSuccOut": ho_ok[0], "L.HHO.IntraeNB.InterFreq.ExecSuccOut": ho_ok[1],
+                    "L.HHO.IntereNB.IntraFreq.ExecSuccOut": ho_ok[2], "L.HHO.IntereNB.InterFreq.ExecSuccOut": ho_ok[3],
                     "L.Cell.Unavail.Dur.Sys": h["RRU.CellUnavailableTime.sum"], "L.Cell.Unavail.Dur.Manual": 0})
     return out
 

@@ -65,23 +65,27 @@ real exports: missing ROPs, re-delivered files, counter resets and success count
 
 ## Vendor mapping status
 
-`ranorm coverage` prints the current state. Each counter carries a status:
+`ranorm coverage` prints the current state. Each counter carries a status, and a counter name is only filled in when it appears in at
+least one independent public source (engineering blogs, forums, open training material), not only in documents marked confidential by
+a vendor or an operator.
 
-| Vendor | Status | KPIs available |
+| Vendor | Counters filled in | KPIs available |
 |---|---|---|
-| Ericsson | 18 counters named as in multiple independent public references, 1 to verify (PRB used is a release-dependent sum) | 11 of 11 |
-| Huawei | 13 publicly referenced, 3 to verify (handover counters, manual unavailability), 1 with no public equivalent | 9 of 11 |
-| Nokia, ZTE | templates, to be filled in | 0 of 11 |
+| Ericsson | 18 of 19 (PRB used DL is a release-dependent sum, left to verify) | 11 of 11 |
+| Huawei | 15 of 17 (no public equivalent of `ERAB.SessionTimeUE`; manual unavailability to verify) | 10 of 11 |
+| Nokia | 4 of 19 (RRC and E-RAB setup) | 2 of 11 |
+| ZTE | 0 of 19: ZTE counters are numeric IDs that change between software versions and only appear in vendor-confidential documents | 0 of 11 |
 
-Counter names are vendor PM counter names. Check them against your vendor documentation for your software release before relying on
-the output; releases rename and split counters.
+Counter names are vendor PM counter names. Check them against the vendor documentation for your software release before relying on
+the output; releases rename and split counters. The pipeline skips a vendor whose export format is not defined and reports, per vendor,
+which KPIs cannot be produced and which counters are missing.
 
 ## Sources
 
 - 3GPP TS 32.425 (ETSI TS 132 425 V14.1.0), *Performance measurements, E-UTRAN*
 - 3GPP TS 32.450 (ETSI TS 132 450 V17.0.0), *Key Performance Indicators for E-UTRAN: Definitions*
-- No operator or employer documents, formulas or data are used. Mapping expressions are written from public references and
-  professional knowledge, and the data is synthetic.
+- No operator or employer documents, formulas or data are used, including copies of such documents found online. Mapping expressions
+  come from independent public references, and the data is synthetic.
 
 ## Limitations and next steps
 
