@@ -1,0 +1,91 @@
+# Rumus KPI E-UTRAN atas counter seragam. Rumus resmi dari 3GPP TS 32.450 Rel-17 (ETSI TS 132 450 V17.0.0) ditandai standard: 3gpp.
+# KPI yang lazim di operator tetapi tidak didefinisikan 3GPP ditandai standard: convention, beserta alasannya.
+# Setiap KPI adalah perbandingan jumlah: SUM(num) / SUM(den) * scale, dihitung di level agregasi yang diminta (bukan rata-rata rasio).
+version: 1
+kpis:
+  rrc_setup_sr:
+    name: RRC connection establishment success rate
+    standard: 3gpp
+    clause: "TS 32.450 6.1.1.1 (RRC part of E-RAB Accessibility)"
+    num: RRC.ConnEstabSucc.sum
+    den: RRC.ConnEstabAtt.sum
+    scale: 100
+    unit: percent
+  s1_setup_sr:
+    name: S1 signalling connection success rate
+    standard: 3gpp
+    clause: "TS 32.450 6.1.1.1 (S1 part of E-RAB Accessibility)"
+    num: S1SIG.ConnEstabSucc
+    den: S1SIG.ConnEstabAtt
+    scale: 100
+    unit: percent
+  erab_init_setup_sr:
+    name: Initial E-RAB establishment success rate
+    standard: 3gpp
+    clause: "TS 32.450 6.1.1.1 (E-RAB part of A1)"
+    num: ERAB.EstabInitSuccNbr.sum
+    den: ERAB.EstabInitAttNbr.sum
+    scale: 100
+    unit: percent
+  erab_accessibility:
+    name: E-RAB Accessibility (A1, initial E-RAB)
+    standard: 3gpp
+    clause: "TS 32.450 6.1.1.1, A1 = RRC SR x S1 SR x initial E-RAB SR"
+    product_of: [rrc_setup_sr, s1_setup_sr, erab_init_setup_sr]   # produk dari tiga rasio, masing-masing dihitung dari jumlah
+    unit: percent
+  erab_retainability_r2:
+    name: E-RAB Retainability (R2, UE level)
+    standard: 3gpp
+    clause: "TS 32.450 6.2.1.1, R2 = ERAB.RelActNbr / ERAB.SessionTimeUE"
+    num: ERAB.RelActNbr.sum
+    den: ERAB.SessionTimeUE
+    scale: 3600            # 3GPP mendefinisikan rilis abnormal per detik sesi; ditampilkan per jam sesi agar terbaca
+    unit: abnormal releases per session-hour
+  erab_drop_ratio:
+    name: E-RAB drop ratio (active releases / all releases)
+    standard: convention
+    note: "Widely used as 'service drop rate' but not defined in TS 32.450, which defines retainability per session time (R2)."
+    num: ERAB.RelActNbr.sum
+    den: ERAB.RelAttNbr.sum
+    scale: 100
+    unit: percent
+  ho_exec_sr:
+    name: Handover execution success rate
+    standard: 3gpp
+    clause: "TS 32.450 6.5.1.1 execution part, HO.ExeSucc / HO.ExeAtt (intra- and inter-eNB, intra- and inter-frequency)"
+    num: HO.ExeSucc
+    den: HO.ExeAtt
+    scale: 100
+    unit: percent
+  ip_thp_dl:
+    name: E-UTRAN IP throughput DL
+    standard: 3gpp
+    clause: "TS 32.450 6.3.1, IP Throughput DL = sum ThpVolDl / sum ThpTimeDl; TS 32.425 4.4.6.3 and 4.4.6.5"
+    num: DRB.IPVolDl.sum
+    den: DRB.IPTimeDl.sum
+    scale: 1               # kbit / ms = Mbit/s
+    unit: Mbit/s
+  ip_thp_ul:
+    name: E-UTRAN IP throughput UL
+    standard: 3gpp
+    clause: "TS 32.450 6.3.1; TS 32.425 4.4.6.4 and 4.4.6.6"
+    num: DRB.IPVolUl.sum
+    den: DRB.IPTimeUl.sum
+    scale: 1
+    unit: Mbit/s
+  cell_availability:
+    name: E-UTRAN cell availability
+    standard: 3gpp
+    clause: "TS 32.450 6.4.1, (period - RRU.CellUnavailableTime) / period"
+    num_expr: "period_s - RRU.CellUnavailableTime.sum"
+    den: period_s
+    scale: 100
+    unit: percent
+  prb_util_dl:
+    name: DL total PRB usage (time-weighted)
+    standard: convention
+    note: "TS 32.425 4.5.3 gives RRU.PrbTotDl as a percentage per period; it is not a 32.450 KPI. Aggregated as a time-weighted mean, never as a sum of percentages."
+    num_expr: "RRU.PrbTotDl * period_s"
+    den: period_s
+    scale: 1
+    unit: percent

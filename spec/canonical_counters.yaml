@@ -1,0 +1,29 @@
+# Model counter seragam = measurement 3GPP TS 32.425 (E-UTRAN), dijumlahkan ke subcounter .sum (semua cause/QCI).
+# Setiap entri mencantumkan pasal sumber di ETSI TS 132 425 V14.1.0 (3GPP TS 32.425 Rel-14) kecuali disebut lain.
+# Jenis: CC = cumulative counter (boleh dijumlahkan lintas waktu & cell); SI/GAUGE = nilai sampel (tidak boleh dijumlahkan).
+version: 1
+source: "3GPP TS 32.425 Rel-14 (ETSI TS 132 425 V14.1.0) unless noted"
+counters:
+  RRC.ConnEstabAtt.sum:      {unit: count,   type: CC, clause: "4.1.1.1", doc: "RRCConnectionRequest received"}
+  RRC.ConnEstabSucc.sum:     {unit: count,   type: CC, clause: "4.1.1.2", doc: "RRCConnectionSetupComplete received"}
+  S1SIG.ConnEstabAtt:        {unit: count,   type: CC, clause: "4.6.1.1", doc: "UE-associated logical S1 connection attempts eNB->MME"}
+  S1SIG.ConnEstabSucc:       {unit: count,   type: CC, clause: "4.6.1.2", doc: "UE-associated logical S1 connection successes"}
+  ERAB.EstabInitAttNbr.sum:  {unit: count,   type: CC, clause: "4.2.1.1", doc: "Initial E-RABs requested (INITIAL CONTEXT SETUP REQUEST)"}
+  ERAB.EstabInitSuccNbr.sum: {unit: count,   type: CC, clause: "4.2.1.2", doc: "Initial E-RABs established (INITIAL CONTEXT SETUP RESPONSE)"}
+  ERAB.EstabAddAttNbr.sum:   {unit: count,   type: CC, clause: "4.2.1.4", doc: "Additional E-RABs requested"}
+  ERAB.EstabAddSuccNbr.sum:  {unit: count,   type: CC, clause: "4.2.1.5", doc: "Additional E-RABs established"}
+  ERAB.RelActNbr.sum:        {unit: count,   type: CC, clause: "4.2.2.6", doc: "E-RABs released while active (data in buffer), excluding normal/mobility causes"}
+  ERAB.RelAttNbr.sum:        {unit: count,   type: CC, clause: "4.2.2.3", doc: "E-RABs attempted to release (all causes)"}
+  ERAB.SessionTimeUE:        {unit: s,       type: CC, clause: "4.2.4.1", doc: "Aggregated in-session seconds for UEs in the cell"}
+  # TS 32.450 6.5.1 memakai HO.ExeAtt/HO.ExeSucc; TS 32.425 memecahnya per intra/inter-eNB (4.3.1.1, 4.3.1.2) dan per frekuensi
+  # (4.3.1.4). Vendor memecah dengan cara berbeda (mis. per frekuensi di level relasi cell), jadi model seragam memakai totalnya.
+  HO.ExeAtt:                 {unit: count,   type: CC, clause: "TS 32.450 6.5.1; TS 32.425 4.3.1", doc: "Outgoing handover executions attempted, all types"}
+  HO.ExeSucc:                {unit: count,   type: CC, clause: "TS 32.450 6.5.1; TS 32.425 4.3.1", doc: "Outgoing handovers successful, all types"}
+  DRB.IPVolDl.sum:           {unit: kbit,    type: CC, clause: "4.4.6.3", doc: "kbits of scheduled IP throughput volume, DL (last TTI excluded per TS 36.314)"}
+  DRB.IPTimeDl.sum:          {unit: ms,      type: CC, clause: "4.4.6.5", doc: "Time duration of scheduled IP throughput, DL"}
+  DRB.IPVolUl.sum:           {unit: kbit,    type: CC, clause: "4.4.6.4", doc: "kbits of scheduled IP throughput volume, UL"}
+  DRB.IPTimeUl.sum:          {unit: ms,      type: CC, clause: "4.4.6.6", doc: "Time duration of scheduled IP throughput, UL"}
+  RRU.PrbTotDl:              {unit: percent, type: SI, clause: "4.5.3",   doc: "Mean DL total PRB usage 0-100 over the granularity period; aggregate time-weighted, never summed"}
+  RRU.CellUnavailableTime.sum: {unit: s,     type: CC, clause: "4.5.6",   doc: "Seconds the cell was unavailable in the granularity period"}
+  # Bukan measurement 3GPP: panjang periode granularitas, diisi pipeline dari stempel waktu (dibutuhkan rumus availability & bobot PRB)
+  period_s:                  {unit: s,       type: CC, clause: "derived",  doc: "Granularity period length in seconds"}

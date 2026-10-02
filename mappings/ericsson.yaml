@@ -1,0 +1,34 @@
+# Ericsson LTE (EUtranCellFDD) -> model counter seragam (spec/canonical_counters.yaml).
+# Nama counter adalah nama PM counter vendor, diverifikasi terhadap beberapa referensi komunitas publik yang independen.
+# status: verified_public = nama terkonfirmasi di >= 2 sumber publik; to_verify = belum, isi/cek dari dokumentasi vendor Anda.
+vendor: ericsson
+technology: lte
+export:                         # bentuk file ekspor (sintetis, meniru ekspor ROP per cell)
+  granularity_minutes: 15
+  time_column: ROP_START
+  time_format: "%Y-%m-%d %H:%M"
+  timezone_offset_hours: 0      # stempel waktu UTC
+  cell_column: EUtranCellFDD
+counters:
+  RRC.ConnEstabAtt.sum:      {expr: "pmRrcConnEstabAtt", status: verified_public,
+                              note: "Common Ericsson KPIs subtract pmRrcConnEstabAttReatt (re-attempts); 3GPP TS 32.450 does not, so neither does the model."}
+  RRC.ConnEstabSucc.sum:     {expr: "pmRrcConnEstabSucc", status: verified_public}
+  S1SIG.ConnEstabAtt:        {expr: "pmS1SigConnEstabAtt", status: verified_public}
+  S1SIG.ConnEstabSucc:       {expr: "pmS1SigConnEstabSucc", status: verified_public}
+  ERAB.EstabInitAttNbr.sum:  {expr: "pmErabEstabAttInit", status: verified_public}
+  ERAB.EstabInitSuccNbr.sum: {expr: "pmErabEstabSuccInit", status: verified_public}
+  ERAB.EstabAddAttNbr.sum:   {expr: "pmErabEstabAttAdded", status: verified_public}
+  ERAB.EstabAddSuccNbr.sum:  {expr: "pmErabEstabSuccAdded", status: verified_public}
+  ERAB.RelActNbr.sum:        {expr: "pmErabRelAbnormalEnbAct + pmErabRelAbnormalMmeAct", status: verified_public}
+  ERAB.RelAttNbr.sum:        {expr: "pmErabRelAbnormalEnb + pmErabRelNormalEnb + pmErabRelMme", status: verified_public}
+  ERAB.SessionTimeUE:        {expr: "pmSessionTimeUe", status: verified_public, note: "Unit assumed seconds, as in TS 32.425 4.2.4.1; confirm for your release."}
+  HO.ExeAtt:                 {expr: "pmHoExeAttLteIntraF + pmHoExeAttLteInterF", status: verified_public,
+                              note: "EUtranCellRelation counters summed to the source cell before export."}
+  HO.ExeSucc:                {expr: "pmHoExeSuccLteIntraF + pmHoExeSuccLteInterF", status: verified_public}
+  DRB.IPVolDl.sum:           {expr: "pmPdcpVolDlDrb - pmPdcpVolDlDrbLastTTI", unit_in: kbit, status: verified_public}
+  DRB.IPTimeDl.sum:          {expr: "pmUeThpTimeDl", unit_in: ms, status: verified_public}
+  DRB.IPVolUl.sum:           {expr: "pmUeThpVolUl", unit_in: kbit, status: verified_public}
+  DRB.IPTimeUl.sum:          {expr: "pmUeThpTimeUl", unit_in: ms, status: verified_public}
+  RRU.PrbTotDl:              {expr: "100 * pmPrbUsedDl / pmPrbAvailDl", status: to_verify,
+                              note: "pmPrbAvailDl is public; 'PRB used DL' is a sum of several pmPrbUsedDl* counters that varies by release. The synthetic export carries it pre-summed as pmPrbUsedDl."}
+  RRU.CellUnavailableTime.sum: {expr: "pmCellDowntimeAuto + pmCellDowntimeMan", unit_in: s, status: verified_public}

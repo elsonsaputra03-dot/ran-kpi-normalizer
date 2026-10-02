@@ -1,0 +1,12 @@
+name: tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with: {python-version: "3.12"}
+      - run: pip install -e ".[dev]"
+      - run: pytest -q
+      - run: ranorm coverage && ranorm generate --out /tmp/data --days 1 --sites 3 && ranorm run --data /tmp/data --out /tmp/out

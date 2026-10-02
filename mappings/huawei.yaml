@@ -1,0 +1,28 @@
+# Huawei LTE (cell) -> model counter seragam. Lihat catatan status di mappings/ericsson.yaml.
+vendor: huawei
+technology: lte
+export:
+  granularity_minutes: 60
+  time_column: Start Time
+  time_format: "%Y-%m-%d %H:%M:%S"
+  timezone_offset_hours: 7      # waktu lokal (WIB); dinormalkan ke UTC
+  cell_column: Cell Name
+counters:
+  RRC.ConnEstabAtt.sum:      {expr: "L.RRC.ConnReq.Att", status: verified_public, note: "Also exported per cause (.Emc, .HighPri, .Mt, .MoData, .MoSig, .DelayTol); the total is used."}
+  RRC.ConnEstabSucc.sum:     {expr: "L.RRC.ConnReq.Succ", status: verified_public}
+  S1SIG.ConnEstabAtt:        {expr: "L.S1Sig.ConnEst.Att", status: verified_public}
+  S1SIG.ConnEstabSucc:       {expr: "L.S1Sig.ConnEst.Succ", status: verified_public}
+  ERAB.EstabInitAttNbr.sum:  {expr: "L.E-RAB.AttEst", status: verified_public, note: "Counts initial and added E-RABs together; there is no separate initial-only counter in this mapping."}
+  ERAB.EstabInitSuccNbr.sum: {expr: "L.E-RAB.SuccEst", status: verified_public}
+  ERAB.RelActNbr.sum:        {expr: "L.E-RAB.AbnormRel", status: verified_public}
+  ERAB.RelAttNbr.sum:        {expr: "L.E-RAB.AbnormRel + L.E-RAB.NormRel", status: verified_public}
+  ERAB.SessionTimeUE:        {expr: null, status: unmapped, note: "No public Huawei equivalent identified; R2 retainability is reported as unavailable for Huawei rather than estimated."}
+  HO.ExeAtt:                 {expr: null, status: to_verify, note: "Huawei splits handover executions into L.HHO.* counters per intra/inter-eNB and intra/inter-frequency; confirm the exact names for your release."}
+  HO.ExeSucc:                {expr: null, status: to_verify}
+  DRB.IPVolDl.sum:           {expr: "(L.Thrp.bits.DL - L.Thrp.bits.DL.LastTTI) / 1000", unit_in: bit, status: verified_public}
+  DRB.IPTimeDl.sum:          {expr: "L.Thrp.Time.DL.RmvLastTTI", unit_in: ms, status: verified_public}
+  DRB.IPVolUl.sum:           {expr: "(L.Thrp.bits.UL - L.Thrp.bits.UE.UL.LastTTI) / 1000", unit_in: bit, status: verified_public}
+  DRB.IPTimeUl.sum:          {expr: "L.Thrp.Time.UE.UL.RmvLastTTI", unit_in: ms, status: verified_public}
+  RRU.PrbTotDl:              {expr: "100 * L.ChMeas.PRB.DL.Used.Avg / L.ChMeas.PRB.DL.Avail", status: verified_public}
+  RRU.CellUnavailableTime.sum: {expr: "L.Cell.Unavail.Dur.Sys + L.Cell.Unavail.Dur.Manual", unit_in: s, status: to_verify,
+                              note: "L.Cell.Unavail.Dur.Sys is public; confirm the name of the manual-unavailability counter."}

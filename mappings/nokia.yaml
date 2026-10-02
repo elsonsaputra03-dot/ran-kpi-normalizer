@@ -1,0 +1,27 @@
+# Nokia LTE -> model counter seragam: TEMPLATE, belum diisi.
+# Isi expr dengan nama PM counter Nokia dari dokumentasi vendor atau pengetahuan Anda sendiri (bukan dari dokumen/berkas
+# milik operator atau pemberi kerja), lalu ubah status menjadi verified. Pipeline melewati vendor yang counter wajibnya
+# belum terisi dan melaporkannya.
+vendor: nokia
+technology: lte
+export: {granularity_minutes: 60, time_column: null, time_format: null, timezone_offset_hours: 0, cell_column: null}
+counters:
+  RRC.ConnEstabAtt.sum: {expr: null, status: to_verify}
+  RRC.ConnEstabSucc.sum: {expr: null, status: to_verify}
+  S1SIG.ConnEstabAtt: {expr: null, status: to_verify}
+  S1SIG.ConnEstabSucc: {expr: null, status: to_verify}
+  ERAB.EstabInitAttNbr.sum: {expr: null, status: to_verify}
+  ERAB.EstabInitSuccNbr.sum: {expr: null, status: to_verify}
+  ERAB.EstabAddAttNbr.sum: {expr: null, status: to_verify}
+  ERAB.EstabAddSuccNbr.sum: {expr: null, status: to_verify}
+  ERAB.RelActNbr.sum: {expr: null, status: to_verify}
+  ERAB.RelAttNbr.sum: {expr: null, status: to_verify}
+  ERAB.SessionTimeUE: {expr: null, status: to_verify}
+  HO.ExeAtt: {expr: null, status: to_verify}
+  HO.ExeSucc: {expr: null, status: to_verify}
+  DRB.IPVolDl.sum: {expr: null, status: to_verify}
+  DRB.IPTimeDl.sum: {expr: null, status: to_verify}
+  DRB.IPVolUl.sum: {expr: null, status: to_verify}
+  DRB.IPTimeUl.sum: {expr: null, status: to_verify}
+  RRU.PrbTotDl: {expr: null, status: to_verify}
+  RRU.CellUnavailableTime.sum: {expr: null, status: to_verify}
