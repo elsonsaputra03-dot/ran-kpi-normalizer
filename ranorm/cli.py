@@ -18,6 +18,9 @@ def main(argv=None) -> int:
     r = sub.add_parser("run", help="normalize exports and compute KPIs")
     r.add_argument("--data", default="data"); r.add_argument("--out", default="out")
     sub.add_parser("coverage", help="mapping status per vendor and which KPIs each vendor can produce")
+    pb = sub.add_parser("publish", help="generate, run and write one JSON for the dashboard (published/ranorm.json)")
+    pb.add_argument("--data", default="data"); pb.add_argument("--out", default="out"); pb.add_argument("--file", default="published/ranorm.json")
+    pb.add_argument("--days", type=int, default=2); pb.add_argument("--sites", type=int, default=8); pb.add_argument("--seed", type=int, default=7)
     a = ap.parse_args(argv)
     if a.cmd == "generate":
         m = generate.generate(Path(a.out), a.days, a.sites, a.seed)
@@ -31,6 +34,13 @@ def main(argv=None) -> int:
             missing = {c for c, d in m["counters"].items() if not d.get("expr")}
             ok = [k for k in sp.kpis if not (sp.required_by(k) & missing)]
             print(f"{v:9s} counters {st} | KPIs available: {len(ok)}/{len(sp.kpis)}")
+        return 0
+    if a.cmd == "publish":
+        generate.generate(Path(a.data), a.days, a.sites, a.seed)
+        res = pipeline.run(Path(a.data), Path(a.out))
+        doc = pipeline.publish(res, Path(a.data), Path(a.file))
+        size = Path(a.file).stat().st_size
+        print(f"ok: {a.file} ({size / 1024:.0f} KB) vendors {doc['meta']['vendors_run']}, {len(doc['vendor_hour'])} vendor-hours, {len(doc['site_day'])} site-days")
         return 0
     res = pipeline.run(Path(a.data), Path(a.out))
     for v, d in res["dq"].items():

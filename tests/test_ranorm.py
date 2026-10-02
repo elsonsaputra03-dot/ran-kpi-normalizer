@@ -96,12 +96,30 @@ def test_prb_time_weighted_not_summed(run):
 
 
 # --- agregasi KPI ------------------------------------------------------------------------------------------------
+@pytest.mark.parametrize("vendor", ["ericsson", "huawei"])
+def test_counter_reset_does_not_drag_the_ratio_down(run, vendor):
+    """Temuan dari dashboard: reset men-NULL-kan sukses tetapi attempt ROP itu tetap terjumlah, sehingga RRC SR turun palsu."""
+    sp = spec.load(ROOT)
+    m = run["manifest"][vendor]
+    gran = "ts" if vendor == "ericsson" else "hour"
+    # kebenaran dijumlah ke granularitas ekspor vendor dulu (Huawei: per jam), baru efek injeksi diterapkan per baris ekspor
+    t = expected_hourly(run, vendor).groupby(["cell_id", gran])[["RRC.ConnEstabAtt.sum", "RRC.ConnEstabSucc.sum"]].sum().reset_index()
+    reset = {_key_to_utc(vendor, c, x) for c, x in m["reset"]}
+    over = {_key_to_utc(vendor, c, x) for c, x in m["succ_gt_att"]}
+    ok = t[[(c, k) not in reset for c, k in zip(t["cell_id"], t[gran])]].copy()
+    hit = [(c, k) in over for c, k in zip(ok["cell_id"], ok[gran])]
+    ok.loc[hit, "RRC.ConnEstabSucc.sum"] = ok.loc[hit, "RRC.ConnEstabAtt.sum"] + 5        # anomali yang memang ada di ekspor
+    expected = ok["RRC.ConnEstabSucc.sum"].sum() / ok["RRC.ConnEstabAtt.sum"].sum() * 100
+    total = run["con"].execute(f"SELECT {pipeline.kpi_sql(sp, 'rrc_setup_sr')} FROM hourly WHERE vendor = ?", [vendor]).fetchone()[0]
+    assert total == pytest.approx(expected, rel=1e-12)
+
+
 def test_kpi_is_ratio_of_sums_not_mean_of_ratios(run):
     sp = spec.load(ROOT)
     v = pipeline.kpis(run["con"], sp, "vendor").set_index("vendor")
     h = run["con"].execute("SELECT * FROM hourly WHERE vendor = 'ericsson'").fetchdf()
-    ratio_of_sums = h["DRB.IPVolDl.sum"].sum() / h["DRB.IPTimeDl.sum"].sum()
-    mean_of_ratios = (h["DRB.IPVolDl.sum"] / h["DRB.IPTimeDl.sum"]).mean()
+    ratio_of_sums = h["ip_thp_dl__num"].sum() / h["ip_thp_dl__den"].sum()
+    mean_of_ratios = (h["ip_thp_dl__num"] / h["ip_thp_dl__den"]).mean()
     assert v.loc["ericsson", "ip_thp_dl"] == pytest.approx(ratio_of_sums)
     assert abs(ratio_of_sums - mean_of_ratios) > 0.01          # rata-rata rasio memberi angka lain (dan salah)
 
@@ -118,7 +136,8 @@ def test_unmapped_counters_give_unavailable_kpis_not_guesses(run):
     assert all(s == "ok" for s in cov["ericsson"].values())
     v = pd.read_csv(run["out"] / "kpi_vendor_day.csv").set_index("vendor")
     assert pd.isna(v.loc["huawei", "erab_retainability_r2"]) and not pd.isna(v.loc["ericsson", "erab_retainability_r2"])
-    assert run["res"]["dq"]["nokia"]["skipped"] and run["res"]["dq"]["zte"]["skipped"]
+    assert run["res"]["dq"]["nokia"]["skipped"].startswith("export format not defined")
+    assert run["res"]["dq"]["zte"]["skipped"].startswith("mapping not filled in")
 
 
 # --- data quality: semua kerumitan yang disuntikkan terdeteksi ------------------------------------------------------
@@ -129,8 +148,11 @@ def test_dq_detects_every_injected_quirk(run, vendor):
     assert d["negative_counter_values_nulled"] == {m["reset_counter"]: len(m["reset"])}
     assert sum(d["succ_greater_than_att_rops"].values()) == len(m["succ_gt_att"])
     assert d["unmatched_cells"] == 0
+    assert d["missing_rops"] == len(m["dropped"])                                  # untuk ekspor 15 menit maupun per jam
     if vendor == "ericsson":
         assert d["incomplete_cell_hours"] == len({_key_to_utc(vendor, c, t)[0] + str(_key_to_utc(vendor, c, t)[1].replace(minute=0)) for c, t in m["dropped"]})
+    else:
+        assert d["incomplete_cell_hours"] == 0                                      # jam yang hilang tidak terlihat sebagai "tidak lengkap"
 
 
 def test_division_by_zero_is_null_not_inf(tmp_path):
@@ -148,3 +170,12 @@ def test_missing_vendor_column_reported(tmp_path):
     miss = {c["counter"]: c["status"] for c in res["dq"]["ericsson"]["unavailable_counters"]}
     assert miss.get("ERAB.SessionTimeUE") == "missing_in_export"
     assert res["kpi_coverage"]["ericsson"]["erab_retainability_r2"].startswith("unavailable")
+
+
+def test_publish_json_for_dashboard(run, tmp_path):
+    doc = pipeline.publish(run["res"], run["data"], tmp_path / "p.json", ROOT)
+    back = json.loads((tmp_path / "p.json").read_text())                          # valid JSON: tanpa NaN/inf
+    assert set(back) >= {"meta", "counters", "kpis", "mappings", "kpi_coverage", "vendor_day", "vendor_hour", "site_day", "dq", "injected"}
+    hua = next(r for r in back["vendor_day"] if r["vendor"] == "huawei")
+    assert hua["erab_retainability_r2"] is None and hua["ho_exec_sr"] is not None
+    assert back["injected"]["ericsson"]["duplicates"] == back["dq"]["ericsson"]["duplicates_removed"]

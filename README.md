@@ -29,10 +29,15 @@ needs one model in the middle. This project uses the public 3GPP one:
 | Map | Evaluate each mapping expression into a unified counter, including unit conversion |
 | Roll up | Per cell per hour: cumulative counters summed; PRB usage averaged by seconds covered, never summed; completeness recorded |
 | KPIs | `SUM(numerator) / SUM(denominator)` at cell, site, vendor or network level, per hour or day |
-| Report | Duplicates, resets, success greater than attempts, incomplete hours, unmapped counters, and which KPIs each vendor cannot produce |
+| Report | Duplicates, resets, success greater than attempts, missing ROPs (expected minus received), incomplete hours, unmapped counters, and which KPIs each vendor cannot produce |
+
+**Dashboard:** [vendor normalization report](https://elsonsaputra03-dot.github.io/indo-realtime-monitor/ran-normalizer.html), which reads
+[`published/ranorm.json`](published/ranorm.json): KPIs by vendor, hourly trends, a trace from each KPI to the vendor counters behind it,
+the mapping matrix, and injected-versus-detected data quality.
 
 ```bash
 pip install -e ".[dev]"
+ranorm publish                                    # generate + run + write published/ranorm.json for the dashboard
 ranorm coverage                                   # mapping status per vendor and which KPIs each one can produce
 ranorm generate --out data                        # synthetic exports with field quirks and a ground-truth manifest
 ranorm run --data data --out out                  # kpi_{cell,site,vendor,network}_day.csv, kpi_vendor_hour.csv, unified_hourly.parquet, dq.json
@@ -57,7 +62,9 @@ The generator first creates the truth as unified counters, then renders it into 
 real exports: missing ROPs, re-delivered files, counter resets and success counts above attempts. The tests check that:
 
 - every unified counter comes back **identical** to the truth after vendor naming, unit conversion, time zones and roll-up;
-- every injected quirk is detected and counted in the data quality report;
+- every injected quirk is detected and counted in the data quality report, including missing hours in hourly exports, which leave no
+  "incomplete" row behind and are only visible by comparing expected and received ROPs (found when the report was first displayed);
+- when a counter reset removes a numerator, the same period's denominator is excluded too, so success rates are not biased low;
 - a KPI equals the ratio of sums and differs from the mean of per-cell ratios, the classic aggregation mistake;
 - division by zero yields NULL, not `inf` (DuckDB returns `inf`, which would corrupt any network average);
 - mapping expressions are parsed, not pasted into SQL: identifiers are quoted, every divisor is wrapped in `NULLIF(x, 0)`, and anything

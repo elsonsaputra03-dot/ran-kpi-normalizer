@@ -81,10 +81,27 @@ def unify(con, sp, vendors: list[str]) -> None:
             aggs.append(f"sum({_q(c)}) AS {_q(c)}")
         else:   # SI/GAUGE (PRB %): rata-rata berbobot detik, hanya dari periode yang punya nilai
             aggs.append(f"sum({_q(c)} * period_s) / NULLIF(sum(CASE WHEN {_q(c)} IS NOT NULL THEN period_s END), 0) AS {_q(c)}")
+    # Per KPI: pembilang dan penyebut dijumlah HANYA dari ROP yang keduanya valid. Tanpa ini, counter yang di-NULL-kan karena reset
+    # menghapus satu sisi rasio dan diam-diam menurunkan KPI (terlihat di dashboard: RRC SR Huawei "turun" ke 97,5% pada jam reset).
+    for k, (n, d) in kpi_parts(sp).items():
+        aggs.append(f"sum(CASE WHEN ({n}) IS NOT NULL AND ({d}) IS NOT NULL THEN ({n}) END) AS {_q(k + '__num')}")
+        aggs.append(f"sum(CASE WHEN ({n}) IS NOT NULL AND ({d}) IS NOT NULL THEN ({d}) END) AS {_q(k + '__den')}")
     con.execute(f"""CREATE OR REPLACE TABLE hourly AS
         SELECT cell_id, site_id, vendor, date_trunc('hour', ts_utc) AS hour, count(*) AS rops, sum(period_s) AS period_s,
                sum(period_s) / 3600.0 AS completeness, {", ".join(aggs)}
         FROM rop GROUP BY ALL""")
+
+
+def kpi_parts(sp) -> dict[str, tuple[str, str]]:
+    """SQL baris-ROP untuk pembilang & penyebut tiap KPI rasio sederhana (KPI produk dihitung dari komponennya)."""
+    out = {}
+    for k, d in sp.kpis.items():
+        if "product_of" in d:
+            continue
+        side = lambda v: " + ".join(_q(x) for x in (v if isinstance(v, list) else [v]))
+        num = spec_mod.to_sql(d["num_expr"])[0] if d.get("num_expr") else side(d["num"])
+        out[k] = (num, side(d["den"]))
+    return out
 
 
 def kpi_sql(sp, name: str) -> str:
@@ -92,15 +109,7 @@ def kpi_sql(sp, name: str) -> str:
     if "product_of" in k:
         parts = [f"({kpi_sql(sp, p)} / 100.0)" for p in k["product_of"]]
         return "(" + " * ".join(parts) + " * 100.0)"
-    def side(v):
-        v = v if isinstance(v, list) else [v]
-        return " + ".join(f"sum({_q(x)})" for x in v)
-    if k.get("num_expr"):
-        expr, _ = spec_mod.to_sql(k["num_expr"])
-        num = f"sum({expr})"
-    else:
-        num = side(k["num"])
-    return f"({num}) / NULLIF({side(k['den'])}, 0) * {float(k['scale'])}"
+    return f"sum({_q(name + '__num')}) / NULLIF(sum({_q(name + '__den')}), 0) * {float(k['scale'])}"
 
 
 def kpis(con, sp, level: str, period: str = "day") -> list[dict]:
@@ -126,6 +135,13 @@ def dq_checks(con, dq: dict) -> None:
                 viol[f"{s} > {a}"] = k
         dq[v]["succ_greater_than_att_rops"] = viol
         dq[v]["incomplete_cell_hours"] = con.execute("SELECT count(*) FROM hourly WHERE vendor = ? AND completeness < 1", [v]).fetchone()[0]
+        # ROP yang seharusnya ada vs yang diterima. Untuk ekspor per jam, jam yang hilang tidak meninggalkan baris "tidak lengkap",
+        # jadi kelengkapan saja tidak cukup (celah ditemukan saat data Huawei ditampilkan di dashboard).
+        gran = dq[v]["granularity_minutes"]
+        exp, got = con.execute(f"""SELECT (SELECT count(*) FROM inventory WHERE vendor = ?) *
+                                          (CAST(epoch(max(ts_utc)) - epoch(min(ts_utc)) AS BIGINT) / {gran * 60} + 1), count(*)
+                                   FROM rop WHERE vendor = ?""", [v, v]).fetchone()
+        dq[v]["expected_rops"], dq[v]["missing_rops"] = int(exp or 0), int((exp or 0) - got)
 
 
 def run(data: Path, out: Path, root: Path = spec_mod.ROOT) -> dict:
@@ -137,7 +153,8 @@ def run(data: Path, out: Path, root: Path = spec_mod.ROOT) -> dict:
     for v in sp.mappings:
         f = data / f"{v}_lte.csv"
         if v not in sp.ready_vendors():
-            dq[v] = {"skipped": "mapping not filled in (all counters to_verify)"}; continue
+            reason = "export format not defined" if sp.mapped(v) else "mapping not filled in (all counters to_verify)"
+            dq[v] = {"skipped": f"{reason}; {len(sp.mapped(v))} of {len(sp.mappings[v]['counters'])} counters mapped"}; continue
         if not f.exists():
             dq[v] = {"skipped": f"no export file {f.name}"}; continue
         load_vendor(con, sp, v, f, dq); done.append(v)
@@ -159,3 +176,38 @@ def run(data: Path, out: Path, root: Path = spec_mod.ROOT) -> dict:
     (out / "dq.json").write_text(json.dumps(result, indent=1, default=str))
     result["con"] = con
     return result
+
+
+def publish(res: dict, data: Path, path: Path, root: Path = spec_mod.ROOT) -> dict:
+    """Satu file JSON ringkas untuk dashboard: spesifikasi, mapping, cakupan KPI, KPI vendor (hari & jam), KPI site (hari), DQ."""
+    import math
+    from datetime import datetime, timezone
+    sp, con = spec_mod.load(root), res["con"]
+
+    def rows(df):
+        out = []
+        for r in df.to_dict("records"):
+            out.append({k: (None if isinstance(v, float) and (math.isnan(v) or math.isinf(v)) else (str(v) if hasattr(v, "isoformat") else v))
+                        for k, v in r.items()})
+        return out
+
+    manifest = json.loads((data / "manifest.json").read_text()) if (data / "manifest.json").exists() else {}
+    doc = {
+        "meta": {"generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "days": manifest.get("days"),
+                 "cells": manifest.get("cells"), "vendors_run": res["vendors"],
+                 "sources": ["3GPP TS 32.425 (ETSI TS 132 425 V14.1.0)", "3GPP TS 32.450 (ETSI TS 132 450 V17.0.0)"]},
+        "counters": sp.counters,
+        "kpis": {k: {f: v.get(f) for f in ("name", "standard", "clause", "note", "unit", "num", "den", "num_expr", "product_of", "scale")}
+                 for k, v in sp.kpis.items()},
+        "mappings": {v: {"export": m["export"], "counters": m["counters"]} for v, m in sp.mappings.items()},
+        "kpi_coverage": res["kpi_coverage"],
+        "vendor_day": rows(kpis(con, sp, "vendor", "day")),
+        "vendor_hour": rows(kpis(con, sp, "vendor", "hour")),
+        "site_day": rows(kpis(con, sp, "site", "day")),
+        "dq": {v: {k: x for k, x in d.items()} for v, d in res["dq"].items()},
+        "injected": {v: {"dropped_rops": len(m["dropped"]), "duplicates": m["duplicates"], "resets": len(m["reset"]),
+                         "succ_gt_att": len(m["succ_gt_att"])} for v, m in manifest.items() if isinstance(m, dict) and "dropped" in m},
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(doc, separators=(",", ":"), default=str))
+    return doc
